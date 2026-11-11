@@ -248,7 +248,22 @@ class DecisionLog:
             return [{c.name: getattr(r, c.name) for c in Decision.__table__.columns} for r in rows]
 
     def reconcile(self, results: list[dict]) -> dict:
-        """Compare the log with the tickets processed. Gaps are listed, never hidden."""
+        """Compare the log with the tickets processed. Gaps are listed, never hidden. Never raises."""
+        try:
+            return self._reconcile(results)
+        except Exception as exc:  # an unreadable log is reported as a failed reconciliation, not a crash
+            return {
+                "tickets_processed": len(results),
+                "decisions_expected": sum(len(expected_stages(r)) for r in results),
+                "decisions_logged": 0,
+                "missing": [],
+                "missing_count": len(results),
+                "write_failures": self.write_failures,
+                "reconciles": False,
+                "error": f"{type(exc).__name__}: {exc}",
+            }
+
+    def _reconcile(self, results: list[dict]) -> dict:
         from collections import Counter
 
         logged = Counter()

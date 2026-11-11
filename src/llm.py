@@ -2,6 +2,9 @@
 
 - Calls are made at temperature 0 and cached on (model, prompt text), so a rerun of the same tickets gives the same
   replies, costs nothing and is quick. The cache is a local SQLite file (git-ignored).
+- A circuit breaker stops calling the provider after BREAKER_THRESHOLD consecutive failed requests and fails fast for
+  BREAKER_COOLDOWN seconds, so a provider outage costs seconds, not minutes of retries per ticket. One trial call is
+  allowed after the cooldown; a success closes the breaker.
 - Transient failures (timeouts, rate limits, 5xx) are retried with exponential backoff and jitter. Other failures are
   not retried. complete() never raises: it returns an LLMResult with `error` set so the caller can escalate (A11).
 """
@@ -20,6 +23,8 @@ from dataclasses import dataclass
 from .config import Settings, get_settings
 
 log = logging.getLogger(__name__)
+BREAKER_THRESHOLD = 3
+BREAKER_COOLDOWN = 30.0
 
 
 @dataclass
@@ -33,10 +38,13 @@ class LLMResult:
 
 
 class LLMClient:
-    def __init__(self, settings: Settings | None = None, client=None, sleep=time.sleep):
+    def __init__(self, settings: Settings | None = None, client=None, sleep=time.sleep, now=time.monotonic):
         self.settings = settings or get_settings()
         self._client = client
-        self._sleep = sleep
+        self._sleep, self._now = sleep, now
+        self._consecutive_failures = 0
+        self._open_until = 0.0
+        self.breaker_trips = 0
         self._lock = threading.Lock()
         self.calls = 0  # real network calls made (cache misses)
         self.cache_hits = 0
@@ -104,6 +112,8 @@ class LLMClient:
             return LLMResult(hit["text"], model, hit.get("model_version", ""), cached=True)
         if not self.settings.openrouter_api_key:
             return LLMResult(model=model, error="no_api_key")
+        if self._consecutive_failures >= BREAKER_THRESHOLD and self._now() < self._open_until:
+            return LLMResult(model=model, error="circuit_open: provider failing, not calling it for now")
         last = ""
         for attempt in range(1, self.settings.llm_max_retries + 2):
             try:
@@ -119,6 +129,7 @@ class LLMClient:
                     raise ValueError("empty completion")
                 version = getattr(r, "model", "") or model
                 self._put(key, {"text": text, "model_version": version})
+                self._consecutive_failures = 0
                 return LLMResult(text, model, version, attempts=attempt)
             except Exception as exc:
                 last = f"{type(exc).__name__}: {str(exc)[:160]}"
@@ -127,6 +138,16 @@ class LLMClient:
                 )
                 log.warning("LLM call failed (attempt %s): %s%s", attempt, last, "; retrying" if retry else "")
                 if not retry:
+                    self._failed()
                     return LLMResult(model=model, attempts=attempt, error=last)
                 self._sleep(min(30.0, 2 ** (attempt - 1)) * (0.5 + random.random()))
-        return LLMResult(model=model, attempts=attempt, error=last)  # pragma: no cover
+        self._failed()
+        return LLMResult(model=model, attempts=attempt, error=last)
+
+    def _failed(self) -> None:
+        self._consecutive_failures += 1
+        if self._consecutive_failures >= BREAKER_THRESHOLD:
+            if self._now() >= self._open_until:
+                self.breaker_trips += 1
+                log.error("LLM circuit open after %s consecutive failures", self._consecutive_failures)
+            self._open_until = self._now() + BREAKER_COOLDOWN
