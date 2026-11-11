@@ -1,0 +1,22 @@
+# Direct dependencies. requirements.txt is the pinned lock generated from a working install.
+numpy
+pandas
+scikit-learn
+sentence-transformers
+chromadb
+langgraph
+langchain-core
+openai
+fastapi
+uvicorn
+pydantic
+python-dotenv
+prometheus-client
+SQLAlchemy
+tqdm
+PyYAML
+pytest
+pytest-cov
+flake8
+black
+httpx
