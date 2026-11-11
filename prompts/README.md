@@ -14,6 +14,6 @@ Rules:
 | PR-01 grounded answer | 0.2 | run on 60 development tickets (D-10); v0.1 kept |
 | PR-02 escalation hand-over | 0.2 | run on 20 escalations, all notes from the model (D-10); v0.1 kept |
 | PR-03 claim-support check | 0.2 | run on 40 drafts, 121 claims, fails closed (D-11); v0.1 kept |
-| PR-04 answer-quality judge | 0.1 | draft, not yet run (evaluation) |
+| PR-04 answer-quality judge | 0.2 | run on 68 replies; unusable (echoed the forbidden list), discarded (D-14) |
 
 Examples inside the prompt text use `{placeholders}` that the code fills in.
