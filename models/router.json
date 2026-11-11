@@ -1,0 +1,152 @@
+{
+  "answerable_rates": {
+    "account_access": 0.75,
+    "api_key_issue": 0.65,
+    "api_usage_question": 0.9231,
+    "authentication_failure": 0.6818,
+    "billing_query": 0.8462,
+    "compliance_request": 0.0,
+    "configuration_help": 0.5789,
+    "data_export": 0.9032,
+    "data_residency": 0.7097,
+    "database_issue": 0.3929,
+    "deployment_failure": 0.6897,
+    "feature_request": 0.0,
+    "integration_help": 0.7391,
+    "onboarding": 0.875,
+    "performance_degradation": 0.44,
+    "quota_or_overage": 0.84,
+    "rate_limit": 0.8667,
+    "rollback_request": 0.7333,
+    "security_incident": 0.0,
+    "sso_configuration": 0.8214,
+    "unclear_request": 0.0,
+    "webhook_issue": 0.7391
+  },
+  "threshold": 0.64,
+  "p_must_limit": 0.2,
+  "rule": "threshold = W / (W + 1), W = wrong_cost x pass_through = 9.0 x 0.2 = 1.8 (units of the saving from one correct automatic reply)",
+  "wrong_cost": 9.0,
+  "filter_pass_through_ASSUMED": 0.2,
+  "n_train": 500,
+  "folds": "GroupKFold(5) by ticket body text",
+  "sweep": [
+    {
+      "threshold": 0.5,
+      "auto_responded": 356,
+      "coverage_pct": 71.2,
+      "labelled_auto_among_them_pct": 77.5,
+      "wrongly_auto_responded": 80,
+      "must_not_auto_responded": 0,
+      "implied_router_cost_ratio": 1.0
+    },
+    {
+      "threshold": 0.55,
+      "auto_responded": 345,
+      "coverage_pct": 69.0,
+      "labelled_auto_among_them_pct": 79.1,
+      "wrongly_auto_responded": 72,
+      "must_not_auto_responded": 0,
+      "implied_router_cost_ratio": 1.22
+    },
+    {
+      "threshold": 0.6,
+      "auto_responded": 341,
+      "coverage_pct": 68.2,
+      "labelled_auto_among_them_pct": 79.5,
+      "wrongly_auto_responded": 70,
+      "must_not_auto_responded": 0,
+      "implied_router_cost_ratio": 1.5
+    },
+    {
+      "threshold": 0.65,
+      "auto_responded": 314,
+      "coverage_pct": 62.8,
+      "labelled_auto_among_them_pct": 79.9,
+      "wrongly_auto_responded": 63,
+      "must_not_auto_responded": 0,
+      "implied_router_cost_ratio": 1.86
+    },
+    {
+      "threshold": 0.7,
+      "auto_responded": 241,
+      "coverage_pct": 48.2,
+      "labelled_auto_among_them_pct": 80.1,
+      "wrongly_auto_responded": 48,
+      "must_not_auto_responded": 0,
+      "implied_router_cost_ratio": 2.33
+    },
+    {
+      "threshold": 0.75,
+      "auto_responded": 184,
+      "coverage_pct": 36.8,
+      "labelled_auto_among_them_pct": 84.8,
+      "wrongly_auto_responded": 28,
+      "must_not_auto_responded": 0,
+      "implied_router_cost_ratio": 3.0
+    },
+    {
+      "threshold": 0.8,
+      "auto_responded": 130,
+      "coverage_pct": 26.0,
+      "labelled_auto_among_them_pct": 86.9,
+      "wrongly_auto_responded": 17,
+      "must_not_auto_responded": 0,
+      "implied_router_cost_ratio": 4.0
+    },
+    {
+      "threshold": 0.85,
+      "auto_responded": 84,
+      "coverage_pct": 16.8,
+      "labelled_auto_among_them_pct": 88.1,
+      "wrongly_auto_responded": 10,
+      "must_not_auto_responded": 0,
+      "implied_router_cost_ratio": 5.67
+    },
+    {
+      "threshold": 0.9,
+      "auto_responded": 24,
+      "coverage_pct": 4.8,
+      "labelled_auto_among_them_pct": 87.5,
+      "wrongly_auto_responded": 3,
+      "must_not_auto_responded": 0,
+      "implied_router_cost_ratio": 9.0
+    },
+    {
+      "threshold": 0.95,
+      "auto_responded": 0,
+      "coverage_pct": 0.0,
+      "labelled_auto_among_them_pct": null,
+      "wrongly_auto_responded": 0,
+      "must_not_auto_responded": 0,
+      "implied_router_cost_ratio": 19.0
+    }
+  ],
+  "p_must_limit_sweep": [
+    {
+      "p_must_limit": 0.05,
+      "auto_responded": 311,
+      "must_not_auto_responded": 0
+    },
+    {
+      "p_must_limit": 0.1,
+      "auto_responded": 316,
+      "must_not_auto_responded": 0
+    },
+    {
+      "p_must_limit": 0.2,
+      "auto_responded": 316,
+      "must_not_auto_responded": 0
+    },
+    {
+      "p_must_limit": 0.3,
+      "auto_responded": 316,
+      "must_not_auto_responded": 0
+    },
+    {
+      "p_must_limit": 0.5,
+      "auto_responded": 316,
+      "must_not_auto_responded": 0
+    }
+  ]
+}
