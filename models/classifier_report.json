@@ -1,0 +1,238 @@
+{
+  "n_train": 500,
+  "n_distinct_texts": 215,
+  "folds": "GroupKFold(5) by ticket text",
+  "intent_C_search": {
+    "1": {
+      "oof_accuracy": 0.898,
+      "oof_nll": 0.3375
+    },
+    "3": {
+      "oof_accuracy": 0.934,
+      "oof_nll": 0.2215
+    },
+    "10": {
+      "oof_accuracy": 0.94,
+      "oof_nll": 0.1874
+    },
+    "30": {
+      "oof_accuracy": 0.956,
+      "oof_nll": 0.1756
+    },
+    "100": {
+      "oof_accuracy": 0.958,
+      "oof_nll": 0.1667
+    }
+  },
+  "intent": {
+    "C": 100,
+    "temperature": 0.6943,
+    "oof_accuracy": 0.958,
+    "oof_macro_precision": 0.9595,
+    "oof_macro_recall": 0.9553,
+    "oof_macro_f1": 0.9546,
+    "ece_before_calibration": 0.0768,
+    "ece_after_calibration": 0.0347,
+    "per_class": {
+      "account_access": {
+        "precision": 0.833,
+        "recall": 0.909,
+        "support": 22
+      },
+      "api_key_issue": {
+        "precision": 0.846,
+        "recall": 0.611,
+        "support": 18
+      },
+      "api_usage_question": {
+        "precision": 1.0,
+        "recall": 0.875,
+        "support": 24
+      },
+      "authentication_failure": {
+        "precision": 0.87,
+        "recall": 1.0,
+        "support": 20
+      },
+      "billing_query": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "support": 24
+      },
+      "compliance_request": {
+        "precision": 1.0,
+        "recall": 0.808,
+        "support": 26
+      },
+      "configuration_help": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "support": 17
+      },
+      "data_export": {
+        "precision": 0.906,
+        "recall": 1.0,
+        "support": 29
+      },
+      "data_residency": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "support": 29
+      },
+      "database_issue": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "support": 26
+      },
+      "deployment_failure": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "support": 27
+      },
+      "feature_request": {
+        "precision": 0.8,
+        "recall": 1.0,
+        "support": 20
+      },
+      "integration_help": {
+        "precision": 1.0,
+        "recall": 0.905,
+        "support": 21
+      },
+      "onboarding": {
+        "precision": 1.0,
+        "recall": 0.909,
+        "support": 22
+      },
+      "performance_degradation": {
+        "precision": 0.92,
+        "recall": 1.0,
+        "support": 23
+      },
+      "quota_or_overage": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "support": 23
+      },
+      "rate_limit": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "support": 13
+      },
+      "rollback_request": {
+        "precision": 0.933,
+        "recall": 1.0,
+        "support": 28
+      },
+      "security_incident": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "support": 26
+      },
+      "sso_configuration": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "support": 26
+      },
+      "unclear_request": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "support": 15
+      },
+      "webhook_issue": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "support": 21
+      }
+    }
+  },
+  "intent_strict_grouping": {
+    "cosine_threshold": 0.85,
+    "n_groups": 125,
+    "oof_accuracy": 0.896,
+    "note": "lower bound for brand-new paraphrases; the hidden set likely repeats development texts"
+  },
+  "must_escalate_detection_oof": {
+    "recall": 1.0,
+    "missed": 0,
+    "of": 87
+  },
+  "urgency_candidates": {
+    "majority_baseline_accuracy": 0.452,
+    "intent_probs C=0.3": {
+      "oof_accuracy": 0.512,
+      "oof_nll": 0.9795
+    },
+    "intent_probs C=1": {
+      "oof_accuracy": 0.498,
+      "oof_nll": 0.9769
+    },
+    "intent_probs C=3": {
+      "oof_accuracy": 0.492,
+      "oof_nll": 0.9782
+    },
+    "intent_probs C=10": {
+      "oof_accuracy": 0.492,
+      "oof_nll": 0.9814
+    },
+    "embedding C=0.3": {
+      "oof_accuracy": 0.508,
+      "oof_nll": 1.0003
+    },
+    "embedding C=1": {
+      "oof_accuracy": 0.504,
+      "oof_nll": 0.9952
+    },
+    "embedding C=3": {
+      "oof_accuracy": 0.51,
+      "oof_nll": 1.0057
+    },
+    "embedding C=10": {
+      "oof_accuracy": 0.488,
+      "oof_nll": 1.0191
+    },
+    "embedding+intent_probs C=0.3": {
+      "oof_accuracy": 0.496,
+      "oof_nll": 0.9783
+    },
+    "embedding+intent_probs C=1": {
+      "oof_accuracy": 0.494,
+      "oof_nll": 0.9871
+    },
+    "embedding+intent_probs C=3": {
+      "oof_accuracy": 0.492,
+      "oof_nll": 1.0021
+    },
+    "embedding+intent_probs C=10": {
+      "oof_accuracy": 0.464,
+      "oof_nll": 1.0161
+    }
+  },
+  "urgency": {
+    "features": "intent_probs",
+    "C": 1,
+    "temperature": 1.1489,
+    "oof_accuracy": 0.498,
+    "majority_baseline_accuracy": 0.452,
+    "ece_after_calibration": 0.0362,
+    "mean_confidence": 0.5177,
+    "per_class": {
+      "low": {
+        "precision": 0.229,
+        "recall": 0.062,
+        "support": 128
+      },
+      "medium": {
+        "precision": 0.488,
+        "recall": 0.779,
+        "support": 226
+      },
+      "high": {
+        "precision": 0.625,
+        "recall": 0.445,
+        "support": 146
+      }
+    }
+  },
+  "version": "clf-202f0cf3"
+}
