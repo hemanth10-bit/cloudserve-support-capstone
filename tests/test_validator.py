@@ -184,3 +184,25 @@ def test_a_claim_with_content_the_source_lacks_stays_blocked():
 
 def test_inline_step_markers_are_not_figures():
     assert "numbers" not in failed("Follow these steps: 1. Open the exports page. 2. Click new export. 3. Wait.")
+
+
+def test_customer_id_or_full_name_in_a_reply_is_blocked_but_a_first_name_greeting_is_not():
+    ids = ["CUST-48213", "Maria Gonzalez"]
+    bad = check_reply("Hi Maria, account CUST-48213 has no export.", SRC, "", ids)
+    assert any(c.name == "private_data" and not c.passed and "customer identifier" in c.detail for c in bad)
+    bad2 = check_reply("Thanks Maria Gonzalez, open the exports page.", SRC, "", ids)
+    assert any(c.name == "private_data" and not c.passed for c in bad2)
+    ok = check_reply("Hi Maria, open the exports page.", SRC, "", ids)
+    assert all(c.passed for c in ok if c.name == "private_data")
+
+
+def test_the_pipeline_passes_the_customer_identifiers_to_the_validator():
+    raw = {**EASY, "ticket_id": "N-1", "customer_id": "CUST-77777", "customer_name": "Ana Lopez"}
+    res = Pipeline(
+        llm=FakeLLM(
+            json.dumps(
+                {"can_answer": True, "reply": "Hi Ana Lopez, see [DOC-DATA-001].", "citations": ["DOC-DATA-001"]}
+            )
+        )
+    ).process(normalise(raw))
+    assert res.outcome == "escalated" and "private_data" in res.guardrail["failed_checks"]

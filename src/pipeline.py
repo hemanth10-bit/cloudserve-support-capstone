@@ -22,7 +22,8 @@ from .retrieval import RetrievalResult, Retriever
 from .decision_log import DecisionLog
 from .generation import draft_answer, handover
 from .llm import LLMClient
-from .router import Router
+from .router import RouteDecision, Router
+from . import killswitch
 from .validator import validate
 
 
@@ -88,7 +89,15 @@ class Pipeline:
             res.outcome = "escalated"
             res.route_reason = f"{res.route_reason} Then the drafting step declined to answer: {why}"
             return
-        v = validate(self.llm, ticket.subject, ticket.body, d.reply, ret.passages, d.citations)
+        v = validate(
+            self.llm,
+            ticket.subject,
+            ticket.body,
+            d.reply,
+            ret.passages,
+            d.citations,
+            [ticket.customer_id, ticket.customer_name],
+        )
         res.guardrail = v.to_dict()
         res.stage_status["validate"] = "error" if v.error else "ok"
         if v.error:
@@ -113,6 +122,15 @@ class Pipeline:
             if ret.error and ret.error != "empty_query":
                 errors.append(f"retrieve: {ret.error}")
             decision = self.router.decide(cls, ret)
+            ks = killswitch.status()
+            if ks.active:
+                decision = RouteDecision(
+                    "escalate",
+                    f"Automatic answering is switched off ({ks.reason}), so a person must handle every ticket.",
+                    "KS",
+                    decision.p_auto,
+                    decision.threshold,
+                )
             res = TicketResult(
                 ticket_id=ticket.ticket_id,
                 channel=ticket.channel,
@@ -146,6 +164,16 @@ class Pipeline:
             )
             if decision.route == "auto_respond":
                 self._generate(ticket, res, ret)
+            if res.outcome == "answered":  # last gate before release: the switch may have been thrown meanwhile
+                ks = killswitch.status()
+                if ks.active:
+                    res.outcome = "escalated"
+                    if res.response:
+                        res.response["withheld"] = True
+                    res.route_reason = (
+                        f"{res.route_reason} Held back before sending: "
+                        f"automatic answering was switched off ({ks.reason})."
+                    )
             if res.outcome == "escalated":
                 res.handover = handover(
                     self.llm,
@@ -157,6 +185,7 @@ class Pipeline:
                         "reason": res.route_reason,
                     },
                     ret.passages,
+                    use_model=res.route_rule != "KS",
                 )
         except Exception as exc:  # absolute last resort: a ticket is never dropped
             res = TicketResult(

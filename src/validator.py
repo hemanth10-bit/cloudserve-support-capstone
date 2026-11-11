@@ -125,13 +125,18 @@ def _numbers(text: str) -> set[str]:
     return out
 
 
-def check_reply(reply: str, sources_text: str, ticket_text: str = "") -> list[Check]:
+def check_reply(
+    reply: str, sources_text: str, ticket_text: str = "", identifiers: list[str] | None = None
+) -> list[Check]:
     """The code checks. No model involved, so the result is the same every time."""
     checks: list[Check] = []
     src = sources_text
 
     found = [("email", EMAIL), ("key", KEY), ("card", CARD), ("phone", PHONE)]
     hits = [name for name, rx in found if rx.search(reply)]
+    # the customer's account id or full name must never be repeated (a first-name greeting is allowed)
+    if any(i and len(i.strip()) >= 4 and i.strip().lower() in reply.lower() for i in (identifiers or [])):
+        hits.append("customer identifier")
     checks.append(Check("private_data", not hits, f"found: {', '.join(hits)}" if hits else ""))
 
     bad = [s for s in _sentences_with(PROMISE, reply) if not PROMISE.search(" ".join(_sentences_with(PROMISE, src)))]
@@ -173,13 +178,21 @@ def check_reply(reply: str, sources_text: str, ticket_text: str = "") -> list[Ch
     return checks
 
 
-def validate(llm: LLMClient, subject: str, body: str, reply: str, passages, cited: list[str]) -> Verdict:
+def validate(
+    llm: LLMClient,
+    subject: str,
+    body: str,
+    reply: str,
+    passages,
+    cited: list[str],
+    identifiers: list[str] | None = None,
+) -> Verdict:
     """Run every check on a drafted reply. Never raises; any failure to check means blocked."""
     v = Verdict()
     try:
         used = [p for p in passages if p.doc_id in set(cited)] or list(passages)
         sources_text = "\n".join(p.text for p in used)
-        checks = check_reply(reply, sources_text, clean_ticket_text(subject, body))
+        checks = check_reply(reply, sources_text, clean_ticket_text(subject, body), identifiers)
 
         prompt = load_prompt(*PR03)
         v.prompt_version = prompt.version

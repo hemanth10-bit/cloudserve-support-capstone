@@ -135,7 +135,7 @@ def draft_answer(llm: LLMClient, subject: str, body: str, passages) -> Draft:
     return d
 
 
-def handover(llm: LLMClient, ticket, result_fields: dict, passages) -> dict:
+def handover(llm: LLMClient, ticket, result_fields: dict, passages, use_model: bool = True) -> dict:
     """A short note for the human agent. Falls back to a template so the escalation is never empty."""
     template = {
         "summary": (
@@ -148,6 +148,8 @@ def handover(llm: LLMClient, ticket, result_fields: dict, passages) -> dict:
         "suggested_next_step": "Read the ticket and answer or route it.",
         "source": "template",
     }
+    if not use_model:
+        return {**template, "unsure_about": "Automatic processing is switched off; no model was used."}
     prompt = load_prompt(*PR02)
     user = (
         prompt.user.replace("{intent}", result_fields["intent"])

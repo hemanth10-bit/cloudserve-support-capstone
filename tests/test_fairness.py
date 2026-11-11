@@ -11,8 +11,17 @@ SRC = Path(__file__).resolve().parent.parent / "src"
 def test_group_attributes_are_not_inputs_to_any_decision():
     for name in ("classify.py", "router.py", "generation.py", "validator.py", "retrieval.py", "pipeline.py"):
         code = (SRC / name).read_text()
-        for field in ("customer_tier", "customer_region", "language_fluency", "customer_name", "customer_id"):
+        for field in ("customer_tier", "customer_region", "language_fluency"):
             assert not re.search(rf"\b{field}\b", code), f"{name} reads {field}"
+
+
+def test_customer_id_and_name_are_only_used_to_block_them_from_replies():
+    """They are identifiers, not group attributes: the only use allowed is passing them to the privacy check."""
+    for name in ("classify.py", "router.py", "generation.py", "retrieval.py", "validator.py"):
+        code = (SRC / name).read_text()
+        assert not re.search(r"\bcustomer_(id|name)\b", code), f"{name} reads a customer identifier"
+    uses = [ln for ln in (SRC / "pipeline.py").read_text().splitlines() if re.search(r"\bcustomer_(id|name)\b", ln)]
+    assert len(uses) == 1 and "ticket.customer_id, ticket.customer_name" in uses[0]
 
 
 def test_wilson_interval_behaves():

@@ -57,3 +57,12 @@ Writes `results.jsonl`, `decisions.db` (the decision log), `metrics.json` and `m
 guardrails are in place.
 
 Further commands (API, evaluation harness) are added here as each component lands.
+
+## Kill switch
+To stop all automatic answering immediately (no deployment, no restart):
+
+    python -m src.killswitch on "reason"     # every ticket is escalated from the next one; no model is called
+    python -m src.killswitch status
+    python -m src.killswitch off
+
+Details, who may use it and how it is tested: `docs/governance.md`.
