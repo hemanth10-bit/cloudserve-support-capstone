@@ -56,7 +56,7 @@ def compute_metrics(
     n = len(results)
     answered = [r for r in results if r["outcome"] == "answered"]
     escalated = [r for r in results if r["outcome"] == "escalated"]
-    blocked = [r for r in results if r["outcome"] == "blocked"]
+    blocked = [r for r in results if (r.get("guardrail") or {}).get("blocked")]
     lat = [r["latency_ms"] for r in results]
     m: dict[str, Any] = {}
 
@@ -135,7 +135,32 @@ def compute_metrics(
             }
     tech["latency_ms_median"] = round(statistics.median(lat), 2) if lat else None
     tech["latency_ms_p95"] = round(_quantile(lat, 95), 2) if lat else None
-    tech["hallucination_rate_pct"] = None  # added with generation and validation (B-08, B-09)
+    gen = [r for r in results if r.get("response")]
+    drafted = [r for r in gen if r["response"].get("can_answer")]
+    tech["generation"] = {
+        "tickets_sent_to_generation": len(gen),
+        "drafted_a_reply": len(drafted),
+        "declined_or_rejected": len(gen) - len(drafted),
+        "model_errors": sum(1 for r in gen if str(r["response"].get("error") or "").startswith("llm_unavailable")),
+        "rejected_for_citations": sum(
+            1 for r in gen if str(r["response"].get("error") or "").startswith(("invalid_citation", "no_citation"))
+        ),
+        "unparseable_output": sum(1 for r in gen if r["response"].get("error") == "unparseable_output"),
+        "replies_with_an_uncited_sentence": sum(1 for r in drafted if r["response"].get("uncited_sentences")),
+        "cached_replies": sum(1 for r in gen if r["response"].get("cached")),
+        "handover_notes_from_model": sum(1 for r in results if (r.get("handover") or {}).get("source") == "model"),
+        "handover_notes_from_template": sum(
+            1 for r in results if (r.get("handover") or {}).get("source") == "template"
+        ),
+        "note": "Every cited id is checked in code against the retrieved passages. Whether each claim is supported by "
+        "its source is checked by the validator (B-09).",
+    }
+    if lab:
+        by_id = {r["ticket_id"]: l for r, l in lab}
+        tech["generation"]["drafted_but_labelled_not_answerable"] = sum(
+            1 for r in drafted if not by_id.get(r["ticket_id"], {}).get("answerable_from_docs", True)
+        )
+    tech["hallucination_rate_pct"] = None  # added with the validator (B-09)
     tech["citation_accuracy_pct"] = None
     m["technical"] = tech
 

@@ -140,7 +140,8 @@ def rows_for(
                 "sources_used": [{"doc_id": d, "score": None} for d in g.get("citations", [])],
                 "threshold_applied": None,
                 "action_taken": "auto_respond" if g.get("can_answer") else "escalate",
-                "reason": g.get("unsure_about") or "Reply drafted from the retrieved passages.",
+                "reason": (g.get("unsure_about") or "") + (f" [{g['error']}]" if g.get("error") else "")
+                or "Reply drafted from the retrieved passages.",
                 "rule": None,
                 "guardrail_results": None,
                 "prompt_version": g.get("prompt_version"),

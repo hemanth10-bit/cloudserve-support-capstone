@@ -46,7 +46,7 @@ def test_report_files_are_produced_without_manual_work(sample, tmp_path):
     out = tmp_path / "nested" / "dir"
     assert (out / "metrics.json").exists() and (out / "metrics.md").exists() and (out / "results.jsonl").exists()
     md = (out / "metrics.md").read_text()
-    for section in ("## Volume", "## Business", "## Technical", "## Governance", "PROVISIONAL"):
+    for section in ("## Volume", "## Business", "## Technical", "## Governance"):
         assert section in md
 
 

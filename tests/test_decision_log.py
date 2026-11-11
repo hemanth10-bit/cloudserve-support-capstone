@@ -46,9 +46,10 @@ def test_every_ticket_gets_classification_and_routing_rows(pipe_and_log):
     results = [pipe.process(normalise(r)).to_dict() for r in raw]
     rec = log.reconcile(results)
     assert rec["reconciles"] and rec["missing_count"] == 0
-    assert rec["decisions_logged"] == rec["decisions_expected"] == 20
+    assert rec["decisions_logged"] == rec["decisions_expected"]
     by = log.stages_by_ticket()
-    assert all(sorted(by[r["ticket_id"]]) == ["classification", "routing"] for r in results)
+    for r in results:
+        assert sorted(by[r["ticket_id"]]) == sorted(expected_stages(r))
 
 
 def test_rows_carry_the_minimum_governance_fields(pipe_and_log):
@@ -97,11 +98,12 @@ def test_input_summary_is_short_and_hashed():
 def test_log_persists_across_restarts(tmp_path):
     url = f"sqlite:///{tmp_path / 'd.db'}"
     log = DecisionLog(url, run_id="r1", reset=True)
-    Pipeline(decision_log=log).process(
+    res = Pipeline(decision_log=log).process(
         normalise({"ticket_id": "P-1", "channel": "chat", "body": "How do I export data?"})
     )
     reopened = DecisionLog(url, run_id="r1")
-    assert reopened.count() == 2 and {r["stage"] for r in reopened.fetch("P-1")} == {"classification", "routing"}
+    stages = expected_stages(res.to_dict())
+    assert reopened.count() == len(stages) and {r["stage"] for r in reopened.fetch("P-1")} == set(stages)
 
 
 def test_reconcile_reports_a_gap_instead_of_hiding_it(pipe_and_log, tmp_path):
@@ -128,13 +130,13 @@ def test_write_failure_does_not_stop_the_run_and_is_counted(tmp_path, monkeypatc
     monkeypatch.setattr(mod, "Session", Boom)
     res = pipe.process(normalise({"ticket_id": "W-1", "channel": "chat", "body": "How do I export data?"}))
     assert res.outcome in ("answered", "escalated")  # the ticket was still handled
-    assert log.write_failures == 2
+    assert log.write_failures == len(expected_stages(res.to_dict()))
     lines = log.fallback_path.read_text().splitlines()
-    assert len(lines) == 2 and json.loads(lines[0])["ticket_id"] == "W-1"
+    assert len(lines) == log.write_failures >= 2 and json.loads(lines[0])["ticket_id"] == "W-1"
 
 
 def test_expected_stages_follow_what_ran():
-    assert expected_stages({"stage_status": {"generate": "not_implemented"}}) == ["classification", "routing"]
+    assert expected_stages({"stage_status": {"generate": "skipped"}}) == ["classification", "routing"]
     assert expected_stages({"stage_status": {"generate": "ok", "validate": "ok"}}) == [
         "classification",
         "routing",
@@ -149,9 +151,8 @@ def test_harness_writes_a_log_that_reconciles(tmp_path):
     p.write_text(json.dumps(raw))
     assert harness.main(["--input", str(p), "--output", str(tmp_path / "out")]) == 0
     m = json.loads((tmp_path / "out" / "metrics.json").read_text())["metrics"]["governance"]
-    assert m["decisions_logged"] == 34 and m["decision_log"]["reconciles"] is True
     n = sqlite3.connect(tmp_path / "out" / "decisions.db").execute("select count(*) from decisions").fetchone()[0]
-    assert n == 34
+    assert m["decisions_logged"] == n >= 34 and m["decision_log"]["reconciles"] is True
 
 
 def test_running_the_harness_twice_does_not_double_count(tmp_path):
@@ -161,7 +162,13 @@ def test_running_the_harness_twice_does_not_double_count(tmp_path):
     for _ in range(2):
         harness.main(["--input", str(p), "--output", str(tmp_path / "out")])
     n = sqlite3.connect(tmp_path / "out" / "decisions.db").execute("select count(*) from decisions").fetchone()[0]
-    assert n == 10
+    assert (
+        n
+        == sqlite3.connect(tmp_path / "out" / "decisions.db")
+        .execute("select count(distinct decision_id) from decisions")
+        .fetchone()[0]
+    )
+    assert n >= 10 and n < 20
 
 
 def test_classification_row_does_not_claim_an_action(pipe_and_log):

@@ -2,10 +2,11 @@
 
 process() never raises and always returns a TicketResult, so a run cannot drop a ticket (A9, A11).
 
-STATUS (sprint plan): ingest, classify, retrieve and route are built (B-02, B-04, B-06, B-07).
-The routing threshold is provisional until generation and validation exist (see docs/decisions.md D-08).
-Generation and validation are added in B-08 and B-09; until then an auto-respond decision records
-`response=None` and `stage_status` says so, so the metrics report never pretends otherwise.
+STATUS (sprint plan): ingest, classify, retrieve, route (B-02..B-07), generation (B-08), validation (B-09) built.
+The validator (B-09) checks every drafted reply; any failed check blocks it and the ticket is escalated.
+
+`route` is the router's decision. `outcome` is the final result: a ticket the router sent to auto_respond is
+still escalated if generation says it cannot answer, fails, or cites sources it was not given.
 """
 
 from __future__ import annotations
@@ -19,7 +20,10 @@ from .config import Settings, get_settings
 from .ingest import Ticket, normalise
 from .retrieval import RetrievalResult, Retriever
 from .decision_log import DecisionLog
+from .generation import draft_answer, handover
+from .llm import LLMClient
 from .router import Router
+from .validator import validate
 
 
 @dataclass
@@ -41,8 +45,9 @@ class TicketResult:
     p_auto: float = 0.0  # estimated chance a ticket like this is answerable from the documentation
     threshold_applied: float = 0.0
     outcome: str = "escalated"  # "answered" | "escalated" | "blocked"
-    response: dict | None = None  # filled by B-08
-    guardrail: dict | None = None  # filled by B-09
+    response: dict | None = None  # the drafted reply (PR-01), when generation ran; 'withheld' if blocked
+    handover: dict | None = None  # note for the human agent (PR-02), for every escalated ticket
+    guardrail: dict | None = None  # validator verdict (FR-07) for every drafted reply
     stage_status: dict = field(default_factory=dict)
     latency_ms: float = 0.0
     flags: list = field(default_factory=list)
@@ -61,12 +66,39 @@ class Pipeline:
         retriever: Retriever | None = None,
         router: Router | None = None,
         decision_log: DecisionLog | None = None,
+        llm: LLMClient | None = None,
     ):
         self.settings = settings or get_settings()
         self.classifier = classifier or Classifier()
         self.retriever = retriever or Retriever(self.settings)
         self.router = router or Router()
         self.decision_log = decision_log
+        self.llm = llm or LLMClient(self.settings)
+
+    # ------------------------------------------------------------ generate
+    def _generate(self, ticket: Ticket, res: TicketResult, ret: RetrievalResult) -> None:
+        d = draft_answer(self.llm, ticket.subject, ticket.body, ret.passages)
+        res.response = d.to_dict()
+        failed = bool(d.error) and not d.can_answer and d.error != "no_sources"
+        res.stage_status["generate"] = "error" if failed else "ok"
+        if d.error:
+            res.errors.append(f"generate: {d.error}")
+        if not d.can_answer:
+            why = d.unsure_about or "the documentation does not cover it"
+            res.outcome = "escalated"
+            res.route_reason = f"{res.route_reason} Then the drafting step declined to answer: {why}"
+            return
+        v = validate(self.llm, ticket.subject, ticket.body, d.reply, ret.passages, d.citations)
+        res.guardrail = v.to_dict()
+        res.stage_status["validate"] = "error" if v.error else "ok"
+        if v.error:
+            res.errors.append(f"validate: {v.error}")
+        if v.blocked:
+            res.outcome = "escalated"
+            res.response["withheld"] = True
+            res.route_reason = (
+                f"{res.route_reason} The drafted reply was blocked by the checks and not sent: {v.reason}"
+            )
 
     # ------------------------------------------------------------- process
     def process(self, raw: Ticket | Any) -> TicketResult:
@@ -105,13 +137,27 @@ class Pipeline:
                     "ingest": "ok",
                     "classify": "fallback" if cls.fallback else "ok",
                     "retrieve": "error" if ret.error else "ok",
-                    "generate": "not_implemented",
-                    "validate": "not_implemented",
+                    "generate": "skipped",
+                    "validate": "skipped",
                 },
                 flags=list(ticket.flags),
                 errors=errors,
                 classifier_version=cls.model_version,
             )
+            if decision.route == "auto_respond":
+                self._generate(ticket, res, ret)
+            if res.outcome == "escalated":
+                res.handover = handover(
+                    self.llm,
+                    ticket,
+                    {
+                        "intent": res.intent,
+                        "confidence": res.intent_confidence,
+                        "urgency": res.urgency,
+                        "reason": res.route_reason,
+                    },
+                    ret.passages,
+                )
         except Exception as exc:  # absolute last resort: a ticket is never dropped
             res = TicketResult(
                 ticket_id=ticket.ticket_id,

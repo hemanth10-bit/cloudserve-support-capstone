@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import argparse
 import json
+from collections import Counter
 import logging
 import re
 import sys
@@ -79,7 +80,15 @@ def run(input_path: str, output_dir: str, limit: int | None = None) -> dict:
         dev_bodies=_dev_bodies(),
         bodies_by_id=bodies_by_id,
         decisions_logged=reconciliation["decisions_logged"],
-        extra_governance={"decision_log": reconciliation},
+        extra_governance={
+            "decision_log": reconciliation,
+            "guardrail_activations_by_type": dict(
+                Counter(c for r in results for c in ((r.get("guardrail") or {}).get("failed_checks") or []))
+            ),
+            "private_data_detections": sum(
+                1 for r in results if "private_data" in ((r.get("guardrail") or {}).get("failed_checks") or [])
+            ),
+        },
     )
     run_info = {
         "input": str(input_path),
