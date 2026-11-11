@@ -1,0 +1,57 @@
+# Decision record
+
+Short entries, newest last. Each says what was decided, why, and what evidence supports it.
+
+## D-01 Python 3.12 and re-resolved dependencies (2026-11-10, B-01)
+- **Decision:** develop and run on Python 3.12 (3.10+ is the documented minimum). Dependencies are declared in `requirements.in`; `requirements.txt` is the pinned lock generated from a working install.
+- **Why:** the supplied `requirements.txt` does not install on Python 3.12. A dry run failed building `pandas==2.0.0` (no 3.12 wheel, source build fails with `No module named 'pkg_resources'`). Other pins (numpy 1.24.0, scikit-learn 1.3.0, chromadb 0.3.21, langchain 0.1.0) are similarly too old for a current Python.
+- **Left out:** `psycopg2-binary` (decision log uses SQLite), `jupyter`/`ipython` (no notebooks; a notebook is not a system), `aiohttp`, `langchain-community`.
+- **Check:** `pip install -r requirements.txt` into a fresh venv, then `python -m pytest tests/`.
+
+## D-02 Orchestration (2026-11-10, B-01)
+- **Decision:** use `langgraph` for the ingest -> classify -> retrieve -> route -> generate -> validate graph and the OpenAI SDK pointed at OpenRouter for model calls. No `langchain-community` or `langchain-openai`.
+- **Why:** keeps the dependency surface small and the pipeline explicit and testable, while still using LangGraph as the brief suggests.
+
+## D-03 Classifier is not an LLM (2026-11-10, Stage 3)
+- **Decision:** intent and urgency come from MiniLM embeddings plus a calibrated logistic regression trained on the development tickets.
+- **Why:** deterministic (A5), free, no rate limits over a full unattended run (A9), and gives real probabilities for calibration.
+
+## D-04 Chunking and retrieval design (2026-11-10, B-03/B-04)
+- **Decision:** one chunk per article section (overview, symptoms, common causes, resolution, notes), title prefixed to the embedded text; 29 articles -> 145 chunks. Sections are never split, so numbered resolution steps stay whole. Chroma (cosine) holds the vectors; hits roll up to the article (best chunk score); citations are article ids (`DOC-...`), chunk ids (`DOC-...#section`) resolve to passages.
+- **Why:** articles are short and uniformly structured; customers describe symptoms, which the symptoms chunk matches. Whole-article chunks would dilute the match and exceed MiniLM's input length.
+- **Evidence (dev set, 357 answerable tickets):** the expected article is ranked first for 88.8%, in the top 3 for 94.7% and in the top 5 for 98.9% (MRR 0.926). The worked example from the Ines interview ("my deployment keeps dying") returns DOC-DEPLOY-001, the article she names, which a title keyword search cannot reach. Weak spots at top 3: onboarding 70%, deployment_failure 74%, integration_help 81%.
+
+## D-05 Relevance threshold 0.40, and what retrieval cannot do (2026-11-10, B-04)
+- **Decision:** `RETRIEVAL_MIN_SCORE=0.40`. Passages below it are dropped. At 0.40 the expected article is still in the top 5 for 98.0% of answerable tickets (98.9% with no threshold).
+- **Finding:** retrieval score does not separate answerable from unanswerable tickets (median top score 0.643 vs 0.635). Unanswerable includes 108 tickets that are on-topic but not answerable from the article, and feature requests score high (median 0.72) because they are on-topic. Unclear requests score low (max 0.40).
+- **Consequence:** answerability cannot be decided by retrieval score. Feature, unclear, security and compliance tickets are kept off the auto-answer path by the intent rule (FR-05), and the generator's `can_answer=false` path and the validator catch unsupported answers. The PRD acceptance criterion for FR-03 ("feature and unclear tickets return no passages") is replaced by intent gating; recorded for the Stage 5 revision log.
+- **Sweep and rows:** `evaluation/results/retrieval_eval.json` (re-create with `python -m evaluation.retrieval_eval`).
+
+## D-06 Classifier: features, grouping, calibration (2026-11-10, B-06)
+- **Decision:** MiniLM embeddings of subject + body -> logistic regression (intent, C=100 chosen by out-of-fold log-loss) with temperature scaling fitted on out-of-fold logits (T=0.69). Urgency uses the calibrated intent probabilities as features (chosen over embeddings alone by out-of-fold log-loss) with its own temperature (T=1.15). Model and report are saved in `models/` and the model is retrained deterministically if missing. Re-create with `python -m src.classify`.
+- **Mistake caught on the way:** the first run grouped folds on subject + body and reported 99.0% intent accuracy. The same body appears under different subjects, so those folds leaked. Grouping on body alone gives 95.8%, which is the figure to quote. Recorded because the leakage was easy to miss and the number looked fine.
+- **Honest accuracy (development, folds grouped by body text, 215 groups):** intent accuracy 95.8%, macro precision 96.0%, macro recall 95.5%; calibration error 0.035 (0.077 before calibration). Stricter lower bound with near-duplicate paraphrases kept together (cosine >= 0.85, 125 groups): 89.6%. Weakest classes by recall: api_key_issue 61%, compliance_request 81%, api_usage_question 88%.
+- **Must-escalate safety:** out-of-fold, all 87 always-escalate tickets were predicted as an always-escalate class (0 missed). The router also uses `p_must_escalate`, the probability mass on those four classes.
+- **Urgency is barely predictable:** 49.8% out of fold against a 45.2% majority baseline, mean confidence 0.52, calibration error 0.036. Best possible from text is about 73% because identical texts carry different urgency labels. Urgency confidence is therefore honest and low; the report must say urgency is a weak signal and must not be presented as reliable prioritisation.
+- **Validation caveat:** the classifier is trained on all 500 development tickets, and 62 of 80 validation texts occur in development. Validation intent accuracy (100% on 80, including 18 unseen texts) is optimistic and is reported split by seen/unseen text.
+
+## D-07 Pipeline and harness (2026-11-10, B-05)
+- `src/pipeline.py` processes one ticket and never raises; `evaluation/harness.py --input X --output DIR` processes every ticket in any file with the ticket schema, writes `results.jsonl` incrementally, then `metrics.json` and `metrics.md`. Exit code 0 = completed and reconciled, 1 = completed but counts differ, 2 = input unreadable.
+- **Status:** the router is a placeholder (replaced in B-07) and generation/validation are not built (B-08/B-09). Reports from this stage carry a PROVISIONAL banner and must not be quoted. On validation the placeholder answers 81% and escalates 19%, whereas the labels say 40% should escalate (route agreement 76%): the placeholder ignores whether a ticket is actually answerable, which only generation (`can_answer`) and the validator can judge.
+
+## D-08 Router, answerability estimate and threshold (2026-11-10, B-07)
+- **Decision:** deterministic rule order R1 (classifier unavailable) -> R2 (always-escalate class: security, compliance, feature, unclear) -> R3 (probability mass on those classes >= 0.20) -> R4 (retrieval failed or empty) -> R5 (estimated answerability below threshold) -> auto-respond. The rule that fired and a plain-language reason are recorded on every ticket. Code: `src/router.py`; fitted values: `models/router.json`; re-fit with `python -m src.router`.
+- **Answerability estimate:** p_auto = sum over intents of P(intent) x (share of development tickets of that intent labelled "should auto-respond"), zero for the four always-escalate classes. Chosen over a learned model because it is readable by a support manager and was as good: with leak-free folds the best learned alternatives reached AUC about 0.64 on the 413 tickets the classifier considers safe-class, and the simple per-intent rate gave similar precision at the same coverage.
+- **Evidence it is only a coarse filter:** among those 413 tickets the base rate of "should auto-respond" is 75.3%. Retrieval scores and embeddings add almost nothing, because identical texts carry both labels (data_findings.md point 3). So no threshold makes this stage precise; generation (`can_answer`) and the validator must carry the rest of the protection.
+- **Threshold = 0.64, from a stated cost argument and not a default.** Answer when p_auto x saving > (1 - p_auto) x W, so threshold = W / (W + 1). W is the cost that actually reaches the customer: a wrong reply costs 9 savings (assumption, reflecting "I would rather it said nothing", Marcus) multiplied by the share of wrongly routed tickets assumed to survive generation and validation (20%, a **placeholder**, to be measured at B-09 and B-11). W = 1.8, threshold 0.64.
+- **Sweep (development, out-of-fold):** threshold 0.60 -> 68.2% of tickets auto-routed, 79.5% of them labelled correct; 0.65 -> 62.8%, 79.9%; 0.70 -> 48.2%, 80.1%; 0.75 -> 36.8%, 84.8%; 0.80 -> 26.0%, 86.9%. A stricter threshold such as 0.75 (W = 3) would auto-answer only 37% of tickets, below today's 42% first-contact resolution, so it cannot meet the business goal; 0.64 keeps about 63-68% coverage and drops the intents that need diagnosis (database_issue 39% answerable, performance_degradation 44%, configuration_help 58%).
+- **Safety check:** zero always-escalate tickets were auto-routed at any threshold in the sweep, and none on the 500 development or 80 validation tickets end to end (test_router.py). The R3 limit (0.20) made no difference between 0.10 and 0.50 on development; it stays as a margin.
+- **Validation run with the real router (optimistic: 62 of 80 texts seen in development):** 58 routed to auto-respond, 22 escalated; of the 58, 43 are labelled "should auto-respond" and 15 are labelled not answerable. Route agreement with the labels is 75.0%. Those 15 are what generation and the validator must stop.
+- **Open (PRD question 4):** billing commitments and data-residency claims have no separate rule yet; they are only covered through intent rates (billing_query 85%, data_residency 71% answerable). A wording check belongs in the B-09 validator.
+
+## D-09 Decision log (2026-11-11, B-10)
+- **Decision:** SQLite via SQLAlchemy (`src/decision_log.py`), one row per decision with the Governance Framework minimum fields plus the router rule and requirement ids. Stages: classification and routing for every ticket (including failed and malformed ones); generation and validation rows are added when those stages run (B-08, B-09). Each harness run writes its own `decisions.db` in the output folder (reset per run, so reruns never double count); the API uses `DATABASE_URL`.
+- **Reconciliation (A8):** `reconcile()` compares logged rows with tickets processed per ticket and stage and lists every gap; the harness metrics report prints it and the harness exit code is 1 if it does not reconcile. Validation run: 160 of 160 expected decisions logged, 0 missing, 0 write failures.
+- **Never stops a run:** if the database write fails the row goes to a `.fallback.jsonl` file, the failure is counted and shown in the report.
+- **Privacy:** input_summary has channel, tier, length, a SHA-256 prefix and a 120-character excerpt; no customer name or id (tested).
+- **Deviation from the schema's illustration:** `action_taken` is "continue" on a normal classification row (classifying takes no customer-facing action) and "escalate" when classification fell back. Routing and validation rows use the schema's auto_respond / escalate / block.
