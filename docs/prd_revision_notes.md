@@ -18,3 +18,4 @@ Collected as the build goes so the revision log records real triggers, not tidyi
 | Assumption (new) | none | Router threshold assumes later stages let 20% of wrong auto-routes through. Unmeasured. Must be measured and the threshold re-fitted. | 2026-11-10 |
 | NFR-01 | p95 latency under 3 s for the automated path | Not met: p95 17.9 s, median 5.9 s on the validation gate run (free 8B model, two to three calls per ticket). Revise the target or the architecture, with the numbers. | 2026-11-11 |
 | FR-04 | Threshold from cost argument with 20% pass-through | Measured pass-through on validation was 73% (11 of 15); re-measure on development and re-fit (D-13). | 2026-11-11 |
+| FR-04 | Threshold decision | Author decided 2026-11-12 to keep 0.64 despite the measured pass-through; recorded as a judgement call, not a fitted value (D-17). | 2026-11-12 |
