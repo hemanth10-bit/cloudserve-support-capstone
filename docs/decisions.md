@@ -111,3 +111,15 @@ Short entries, newest last. Each says what was decided, why, and what evidence s
 ## D-18 Clean-checkout rehearsal (2026-11-12, B-19; NFR-08)
 - **What was done:** fresh `gh repo clone` of the GitHub repository into an empty folder, new Python 3.12 virtual environment, `pip install -r requirements.txt`, `cp .env.example .env` with a key added, then the README commands: the test suite (193 passed, 31 s) and the harness on 10 validation tickets (10 of 10 processed, 5 answered, 5 escalated, 1 blocked; `results.jsonl`, `decisions.db`, `metrics.json`, `metrics.md` produced). Nothing from the working copy was reused, and the trained model files came from the repository.
 - **What this does not prove:** it ran on the author's machine, so the Hugging Face embedding model was already in the local cache and the first-time download path was not exercised; NFR-08 asks for a machine that is not the author's, so a second person or machine should still try the README once before submission.
+
+## D-19: Human review of 60 replies (one assessor): hallucination rate and a citation defect
+
+**Method.** 60 replies drafted for development tickets and passed by the validator, blinded (ticket, reply, cited article only), reviewed 2026-11-12 by one assessor (HKP, the author). Responses: `docs/human_review_assessor1.csv`.
+
+**Result.**
+- Unsupported claims: 0 of 60 replies (95% Wilson upper bound 6.0%). Under the Evaluation Framework's target this passes, but the sample is small and these replies had already passed the validator, so it measures what gets through, not the model's raw rate.
+- Citation correct: 49 of 60 (81.7%, 95% CI 70-89%). In all 11 "no" cases the citation was missing from the reply text: the id was in the metadata `citations` field but the model had not written `[DOC-...]` in the reply the customer sees. Reviewer notes also flagged two replies (R10, R17) with a needless extra sentence (verbosity, not a factual fault).
+
+**Limits.** One assessor, so no inter-rater agreement; the Evaluation Framework asks for two. The author reviewed their own system's output, which can bias. Development tickets only; the held-out set was not used.
+
+**Fix.** `draft_answer` now appends `[DOC-...]` for each cited id when the reply text has none (test added; 194 tests pass). This is deterministic; the cited ids were already validated against the retrieved passages. Effect on the rate is to be re-measured by a re-run and re-review of the 11 replies.

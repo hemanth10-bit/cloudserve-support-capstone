@@ -1,0 +1,61 @@
+review_id,unsupported_claims_found(count),claim_text(s),citations_correct(yes/no),notes,assessor_initials
+R01,0,,yes,,HKP
+R02,0,,yes,,HKP
+R03,0,,yes,,HKP
+R04,0,,yes,,HKP
+R05,0,,no,No Citation in the reply,HKP
+R06,0,,no,No citation provided in the reply,HKP
+R07,0,,no,No citation in the reply,HKP
+R08,0,,yes,,HKP
+R09,0,,no,No citation provided in the reply,HKP
+R10,0,,yes,But the first part of the response was not needed,HKP
+R11,0,,yes,,HKP
+R12,0,,yes,,HKP
+R13,0,,no,No citation provided,HKP
+R14,0,,yes,,HKP
+R15,0,,yes,,HKP
+R16,0,,yes,,HKP
+R17,0,,yes,"'Confirm the invitation was accepted, and if it was pending, it would have expired after seven days' was not needed",HKP
+R18,0,,no,No citation in the reply,HKP
+R19,0,,yes,,HKP
+R20,0,,yes,,HKP
+R21,0,,no,No citation in reply,HKP
+R22,0,,yes,,HKP
+R23,0,,yes,,HKP
+R24,0,,yes,,HKP
+R25,0,,yes,,HKP
+R26,0,,yes,,HKP
+R27,0,,yes,,HKP
+R28,0,,yes,,HKP
+R29,0,,yes,,HKP
+R30,0,,yes,,HKP
+R31,0,,no,No citation in the reply,HKP
+R32,0,,yes,,HKP
+R33,0,,yes,,HKP
+R34,0,,yes,,HKP
+R35,0,,yes,,HKP
+R36,0,,yes,,HKP
+R37,0,,yes,,HKP
+R38,0,,yes,,HKP
+R39,0,,yes,,HKP
+R40,0,,yes,,HKP
+R41,0,,yes,,HKP
+R42,0,,yes,,HKP
+R43,0,,yes,,HKP
+R44,0,,no,No citation in the reply,HKP
+R45,0,,yes,,HKP
+R46,0,,yes,,HKP
+R47,0,,yes,,HKP
+R48,0,,yes,,HKP
+R49,0,,yes,,HKP
+R50,0,,yes,,HKP
+R51,0,,yes,,HKP
+R52,0,,yes,,HKP
+R53,0,,no,No citation,HKP
+R54,0,,yes,,HKP
+R55,0,,yes,,HKP
+R56,0,,yes,,HKP
+R57,0,,yes,,HKP
+R58,0,,yes,,HKP
+R59,0,,yes,,HKP
+R60,0,,no,No citation in the reply,HKP

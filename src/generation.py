@@ -130,8 +130,10 @@ def draft_answer(llm: LLMClient, subject: str, body: str, passages) -> Draft:
         d.error = f"invalid_citation: {bad}" if bad else "no_citation"
         d.unsure_about = d.unsure_about or "The reply could not be tied to the retrieved documentation."
         return d
+    if not inline:  # human review (D-19): the reply text itself must show its source, not only the metadata
+        d.reply = f"{reply} " + " ".join(f"[{c}]" for c in d.citations)
     d.can_answer = True
-    d.uncited_sentences = _uncited(reply)
+    d.uncited_sentences = _uncited(d.reply)
     return d
 
 

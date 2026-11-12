@@ -213,3 +213,9 @@ def test_missing_key_is_a_clean_error(tmp_path):
 
     s = dataclasses.replace(get_settings(), cache_path=tmp_path / "c.sqlite", openrouter_api_key="")
     assert LLMClient(s).complete("s", "u").error == "no_api_key"
+
+
+def test_reply_text_shows_its_citation_when_model_only_listed_it_in_metadata():
+    """D-19: human review found 11 of 60 replies whose text had no [DOC-...] mark (id only in the citations field)."""
+    d = draft_answer(FakeLLM(reply(reply="Open exports and click new.")), "s", "b", P)
+    assert d.can_answer and "[DOC-DATA-001]" in d.reply
