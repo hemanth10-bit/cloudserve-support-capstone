@@ -123,3 +123,11 @@ Short entries, newest last. Each says what was decided, why, and what evidence s
 **Limits.** One assessor, so no inter-rater agreement; the Evaluation Framework asks for two. The author reviewed their own system's output, which can bias. Development tickets only; the held-out set was not used.
 
 **Fix.** `draft_answer` now appends `[DOC-...]` for each cited id when the reply text has none (test added; 194 tests pass). This is deterministic; the cited ids were already validated against the retrieved passages. Re-run of the same 11 tickets (2026-11-14): 11 of 11 answered, all 11 replies now carry `[DOC-...]` in the text. The reply wording was not re-reviewed by a person.
+
+## D-20: Secrets scan and CI check before packaging (2026-11-14)
+
+- The author's OpenRouter key (read from the git-ignored `.env`, never printed) was searched for as an exact string in the whole git history (all branches, all patches) and in every working file except `.env` and `.venv`: 0 hits.
+- Pattern search of the history for common key formats (OpenRouter/OpenAI `sk-`, GitHub `ghp_`, AWS `AKIA`, Hugging Face `hf_`, private-key headers): 0 hits.
+- No `.env`, database, key or kill-switch file has ever been tracked. `.env`, `storage/` and `evaluation/results/` are git-ignored.
+- The five most recent CI runs on main all succeeded (latest 3.4 minutes after the push of 3fffeb5).
+- Limits: a scan of my own making, not a dedicated tool such as gitleaks; the zip must be scanned again once built, since it will also contain files from outside the repository.
