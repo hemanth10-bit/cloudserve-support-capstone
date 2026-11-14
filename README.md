@@ -62,6 +62,17 @@ python -m src.killswitch off
 
 Details, who may use it and how it is tested: `docs/governance.md`.
 
+## Web page for a live demo (optional)
+
+```bash
+python -m ui          # then open http://127.0.0.1:8000  (this machine only; Ctrl+C stops it)
+```
+
+Three parts: **Try a ticket** (paste or pick an example and watch it go through each step, with the reply, the seven checks and
+the hand-over note), **Run results** (open any finished harness run: counts, metrics, a filterable ticket table), and the
+**kill switch** button at the top right. It calls the same `Pipeline.process` as the harness and writes to its own log
+(`storage/ui_demo.db`). `/?sample=2` opens with example 2 already running. The tests cover the backend (`tests/test_ui.py`).
+
 ## Other commands
 
 ```bash
@@ -79,6 +90,7 @@ python -m evaluation.build_review_page --sheet SHEET.csv --out review_tool.html 
 
 | Path | What |
 |---|---|
+| `ui/` | optional local web page (FastAPI + one HTML file) |
 | `src/` | the system: `ingest`, `classify`, `retrieval`, `router`, `generation`, `validator`, `decision_log`, `pipeline`, `llm`, `killswitch` |
 | `prompts/` | every prompt, one file per version, with purpose, known weaknesses and change history |
 | `evaluation/` | the harness and the analyses that feed the report |

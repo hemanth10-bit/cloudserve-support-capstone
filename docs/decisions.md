@@ -131,3 +131,11 @@ Short entries, newest last. Each says what was decided, why, and what evidence s
 - No `.env`, database, key or kill-switch file has ever been tracked. `.env`, `storage/` and `evaluation/results/` are git-ignored.
 - The five most recent CI runs on main all succeeded (latest 3.4 minutes after the push of 3fffeb5).
 - Limits: a scan of my own making, not a dedicated tool such as gitleaks; the zip must be scanned again once built, since it will also contain files from outside the repository.
+
+## D-21: A local web page for demonstrating the system (2026-11-14)
+
+The brief asks for an unattended run, not a UI, so the page is optional and adds no new decision logic. `ui/app.py` (FastAPI) calls `Pipeline.process`, reads harness output files and uses `src.killswitch`; `ui/static/index.html` is one file with no external assets. Reasons: a live demo that shows each step and the kill switch is easier to follow than terminal output.
+- Safety: serves on 127.0.0.1 only; ticket and reply text is inserted with `textContent`, never as HTML; run names are looked up in a directory listing, so no user text becomes a path; input limited to 4,000 characters.
+- Honesty: the Run results view carries a standing caveat that accuracy on development/validation files is optimistic; the gate run is listed first. Example tickets are labelled with what the gate run did and "a live run can differ". Observed: VAL-0012 was blocked by the checks in the gate run but passed in a live run, because the checking model is erratic (D-11), so the blocked-reply demo should be shown from the stored run, not promised live.
+- Tests: 10 in `tests/test_ui.py` (fake model; page served, full result and log rows, empty and oversized input, kill switch round trip, run listing, path traversal). 204 tests in all.
+- Limits: single user, one ticket at a time; no login (local only); not a production interface.
