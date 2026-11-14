@@ -27,8 +27,8 @@ SAMPLES = [
     ("VAL-0005", "Answered in the gate run"),
     ("VAL-0009", "Escalated in the gate run: compliance request"),
     ("VAL-0002", "Escalated in the gate run: unclear request"),
-    ("VAL-0012", "Reply blocked in the gate run (the checking model is erratic, so a live run may pass it)"),
-    ("VAL-0071", "Reply blocked in the gate run (the checking model is erratic, so a live run may pass it)"),
+    ("VAL-0028", "Reply blocked in the gate run (the checking model is erratic, so a live run may pass it)"),
+    ("VAL-0047", "Reply blocked in the gate run (the checking model is erratic, so a live run may pass it)"),
 ]
 
 

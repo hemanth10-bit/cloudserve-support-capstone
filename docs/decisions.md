@@ -139,3 +139,11 @@ The brief asks for an unattended run, not a UI, so the page is optional and adds
 - Honesty: the Run results view carries a standing caveat that accuracy on development/validation files is optimistic; the gate run is listed first. Example tickets are labelled with what the gate run did and "a live run can differ". Observed: VAL-0012 was blocked by the checks in the gate run but passed in a live run, because the checking model is erratic (D-11), so the blocked-reply demo should be shown from the stored run, not promised live.
 - Tests: 10 in `tests/test_ui.py` (fake model; page served, full result and log rows, empty and oversized input, kill switch round trip, run listing, path traversal). 204 tests in all.
 - Limits: single user, one ticket at a time; no login (local only); not a production interface.
+
+## D-22: Re-running the validation file after the D-19 fix gave different numbers (2026-11-14)
+
+A fresh harness run on `data/validation_tickets.json` (output `evaluation/results/demo_val`, 80 of 80 processed, exit 0, reconciles) gave 51 answered, 29 escalated, 7 blocked, against the gate run's 49, 31 and 9 (docs/gate_run_validation.md).
+- **Cause, verified:** all 12 replies whose text differs from the gate run differ only by the citation that D-19 now appends. That changes the text the claim checker sees, so its cached answer no longer applies, and the checker (the same erratic 8B model, D-11) judged two tickets differently: VAL-0012 and VAL-0034 went from blocked to answered. The route (answer or escalate) was identical for all 80 tickets, and 0 of 14 always-escalate tickets were answered.
+- **What it means:** the gate-run figures describe the code before D-19. The submitted code gives the new figures on this run, and a different run could differ again at the checking step. The earlier statement that a rerun gives identical decisions holds only when the cache is warm and the inputs are byte-identical.
+- **Run count:** the validation file has now been processed three times (gate run, renamed copy, this run). The hidden set has not been run.
+- **For the demo:** use VAL-0028 and VAL-0047 as the blocked examples; both are blocked in both runs (an invented cause, and a guess about search endpoints, neither in the documentation).
