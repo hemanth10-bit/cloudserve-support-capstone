@@ -4,8 +4,8 @@ Automatic first-line handling of support tickets for CloudServe Solutions. For e
 searches the documentation, decides whether to answer or escalate to a person, drafts a cited reply, checks the reply,
 and records every decision. Anything risky or uncertain goes to a person with a short hand-over note.
 
-**Status:** build complete for the acceptance criteria below; not deployable for automatic sending until a human review
-measures the hallucination rate (see *Known limits*).
+**Status:** build complete for the acceptance criteria below. A one-assessor human review found no unsupported claims in
+60 replies; a second assessor and a held-out check are still advisable before automatic sending (see *Known limits*).
 
 ```
 ticket -> ingest -> classify (intent, urgency) -> retrieve passages -> route (rules + answerability)
@@ -92,8 +92,9 @@ python -m evaluation.build_review_page --sheet SHEET.csv --out review_tool.html 
 
 ## Known limits (read before relying on the numbers)
 
-- **Hallucination rate is not yet measured.** It needs two human assessors; a blinded review page and sheet exist. A model
-  judge was tried and discarded (decisions D-14).
+- **Hallucination rate: 0 of 60 reviewed replies (95% upper bound 6%), one assessor, development tickets, replies that
+  had already passed the validator** (D-19). The framework asks for two assessors; a second is still wanted. The review also
+  found replies missing their citation in the text; fixed.
 - **Latency target not met:** p95 17.9 s against 3 s with a free 8B model (D-13).
 - **The routing threshold (0.64) is a judgement call,** not a fitted optimum: measured pass-through of wrongly routed
   tickets was far higher than assumed (D-13, D-17).

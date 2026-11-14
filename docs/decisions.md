@@ -122,4 +122,4 @@ Short entries, newest last. Each says what was decided, why, and what evidence s
 
 **Limits.** One assessor, so no inter-rater agreement; the Evaluation Framework asks for two. The author reviewed their own system's output, which can bias. Development tickets only; the held-out set was not used.
 
-**Fix.** `draft_answer` now appends `[DOC-...]` for each cited id when the reply text has none (test added; 194 tests pass). This is deterministic; the cited ids were already validated against the retrieved passages. Effect on the rate is to be re-measured by a re-run and re-review of the 11 replies.
+**Fix.** `draft_answer` now appends `[DOC-...]` for each cited id when the reply text has none (test added; 194 tests pass). This is deterministic; the cited ids were already validated against the retrieved passages. Re-run of the same 11 tickets (2026-11-14): 11 of 11 answered, all 11 replies now carry `[DOC-...]` in the text. The reply wording was not re-reviewed by a person.
