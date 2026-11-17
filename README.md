@@ -4,6 +4,8 @@ Automatic first-line handling of support tickets for CloudServe Solutions. For e
 searches the documentation, decides whether to answer or escalate to a person, drafts a cited reply, checks the reply,
 and records every decision. Anything risky or uncertain goes to a person with a short hand-over note.
 
+**Long-form guide:** [`PROJECT_GUIDE.md`](PROJECT_GUIDE.md) covers the engagement narrative, architecture diagrams, safety invariants, evidence, decisions, glossary and known limits.
+
 **Status:** build complete for the acceptance criteria below. A one-assessor human review found no unsupported claims in
 60 replies; a second assessor and a held-out check are still advisable before automatic sending (see *Known limits*).
 
